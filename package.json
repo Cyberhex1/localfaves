@@ -1,0 +1,60 @@
+{
+  "name": "localfaves",
+  "productName": "LocalFaves",
+  "version": "1.0.0",
+  "description": "Save your local dev sites, give each one its own block of ports, and start them with one click.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "shortcut": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-shortcut.ps1",
+    "postinstall": "node scripts/ensure-electron.js",
+    "dist": "electron-builder --win --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0"
+  },
+  "author": "Cyberhex1",
+  "homepage": "https://github.com/Cyberhex1/localfaves",
+  "build": {
+    "appId": "dev.cyberhex1.localfaves",
+    "productName": "LocalFaves",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "LocalFaves-${version}-portable-x64.${ext}",
+      "signExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "LocalFaves-Setup-${version}.${ext}"
+    }
+  }
+}

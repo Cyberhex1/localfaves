@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <title>LocalFaves</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="../assets/icon.png" alt="" width="26" height="26">
+      <span>LocalFaves</span>
+    </div>
+    <div class="search">
+      <input id="search" type="search" placeholder="Find a site…  (Ctrl+F)" autocomplete="off">
+    </div>
+    <div class="top-actions">
+      <select id="sort" title="Sort sites">
+        <option value="recent">Recent first</option>
+        <option value="name">A–Z</option>
+        <option value="port">By port</option>
+      </select>
+      <button class="btn ghost" data-act="import" title="Add several projects from a folder like C:\code">Import folder</button>
+      <button class="btn primary" data-act="new">+ Add site</button>
+      <button class="btn ghost icon" data-act="settings" title="Settings">⚙</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section>
+      <div class="section-head">
+        <h2>Your sites</h2>
+        <span class="muted" id="site-count"></span>
+      </div>
+      <div id="sites" class="sites"></div>
+    </section>
+
+    <section id="spotted-wrap" hidden>
+      <div class="section-head">
+        <h2>Spotted running</h2>
+        <span class="muted">Dev servers on this PC that aren't saved yet — maybe started by you or an agent.</span>
+      </div>
+      <div id="spotted" class="rows"></div>
+    </section>
+
+    <section id="seen-wrap" hidden>
+      <div class="section-head">
+        <h2>Recently spotted</h2>
+        <span class="muted">Not running right now. Save one to give it its own ports.</span>
+      </div>
+      <div id="seen" class="rows"></div>
+    </section>
+  </main>
+
+  <!-- Log drawer -->
+  <aside id="drawer" class="drawer" hidden>
+    <header>
+      <div>
+        <strong id="drawer-title">Log</strong>
+        <div class="muted small" id="drawer-sub"></div>
+      </div>
+      <span class="spacer"></span>
+      <button class="btn ghost small" data-act="copy-log">Copy</button>
+      <button class="btn ghost small" data-act="clear-log">Clear</button>
+      <button class="btn ghost small icon" data-act="close-drawer" title="Close">✕</button>
+    </header>
+    <pre id="log" class="mono"></pre>
+  </aside>
+
+  <!-- Site menu -->
+  <div id="menu" class="popover" hidden></div>
+
+  <!-- Add / edit site -->
+  <dialog id="edit">
+    <form id="edit-form" novalidate>
+      <h2 id="edit-title">Add a site</h2>
+      <input type="hidden" name="id">
+
+      <label class="field">
+        <span>Project folder</span>
+        <div class="row">
+          <input name="folder" class="mono" placeholder="C:\code\my-app" required>
+          <button type="button" class="btn" data-act="browse">Browse…</button>
+        </div>
+      </label>
+
+      <label class="field">
+        <span>Name</span>
+        <input name="name" placeholder="My app" required>
+      </label>
+
+      <label class="field">
+        <span>Start command</span>
+        <div class="row">
+          <input name="command" class="mono" placeholder="npm run dev -- --port {port}" required>
+          <button type="button" class="btn" data-act="detect" title="Guess the command from the project files">Detect</button>
+        </div>
+        <small class="hint" id="detect-note"></small>
+        <small class="hint">Use <code>{port}</code> for the first port, <code>{port2}</code> and <code>{port3}</code> for the spares. <code>PORT</code> is always set to the first one.</small>
+      </label>
+
+      <div class="grid2">
+        <label class="field">
+          <span>First port</span>
+          <input name="portStart" type="number" min="1024" max="65000" required>
+        </label>
+        <label class="field">
+          <span>Ports to reserve</span>
+          <select name="portCount">
+            <option>1</option><option>2</option><option>3</option><option>4</option><option selected>5</option><option>6</option><option>8</option><option>10</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="field">
+        <span>Port notes <em class="muted">(optional, shown when you hover a port)</em></span>
+        <div id="port-notes" class="port-notes"></div>
+      </div>
+
+      <label class="field">
+        <span>Address to open</span>
+        <input name="url" class="mono" placeholder="http://localhost:{port}">
+        <small class="hint">Leave empty for desktop apps or background APIs that shouldn't open a browser tab.</small>
+      </label>
+
+      <details>
+        <summary>More options</summary>
+        <label class="field">
+          <span>Extra environment variables</span>
+          <textarea name="env" class="mono" rows="3" placeholder="API_URL=http://localhost:{port2}"></textarea>
+        </label>
+        <label class="field">
+          <span>Give up waiting after (seconds)</span>
+          <input name="timeoutSec" type="number" min="10" max="600" value="120">
+        </label>
+      </details>
+
+      <div class="preview" id="edit-preview"></div>
+
+      <div class="dialog-actions">
+        <button type="button" class="btn ghost danger" data-act="delete-site" id="delete-btn" hidden>Delete</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-act="close-dialog">Cancel</button>
+        <button type="submit" class="btn primary">Save site</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Note for one port -->
+  <dialog id="note" class="small-dialog">
+    <form id="note-form" novalidate>
+      <h2 id="note-title">Note for :3082</h2>
+      <input type="hidden" name="site"><input type="hidden" name="port">
+      <label class="field">
+        <span>What runs on this port?</span>
+        <input name="note" maxlength="80" placeholder="playtest" autocomplete="off">
+      </label>
+      <p class="hint" id="note-file"></p>
+      <p class="hint">Agents can add notes too: a line like <code>- 3082: playtest</code> in the project's AGENTS.md or CLAUDE.md shows up here.</p>
+      <div class="dialog-actions">
+        <button type="button" class="btn ghost danger" data-act="note-clear" id="note-clear">Remove note</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-act="close-dialog">Cancel</button>
+        <button type="submit" class="btn primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Port hover card -->
+  <div id="porttip" class="porttip" hidden></div>
+
+  <!-- Import -->
+  <dialog id="import">
+    <div class="dlg">
+      <h2>Import projects</h2>
+      <p class="muted" id="import-parent"></p>
+      <div class="import-tools">
+        <label class="check"><input type="checkbox" id="import-all"> Select all</label>
+      </div>
+      <div id="import-list" class="import-list"></div>
+      <p class="hint">Each one gets its own block of ports. You can edit any of them afterwards.</p>
+      <div class="dialog-actions">
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-act="close-dialog">Cancel</button>
+        <button type="button" class="btn primary" data-act="import-add">Add selected</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Settings -->
+  <dialog id="settings">
+    <form id="settings-form" novalidate>
+      <h2>Settings</h2>
+      <div class="grid3">
+        <label class="field"><span>First port block starts at</span><input name="basePort" type="number" min="1024" max="64000"></label>
+        <label class="field"><span>Gap between blocks</span><input name="blockStep" type="number" min="1" max="1000"></label>
+        <label class="field"><span>Ports per site</span><input name="blockSize" type="number" min="1" max="10"></label>
+      </div>
+      <p class="hint" id="settings-example"></p>
+      <label class="field">
+        <span>Editor command</span>
+        <input name="editor" class="mono" placeholder="code">
+        <small class="hint">Used by "Open in editor". For example <code>code</code>, <code>cursor</code> or <code>antigravity</code>.</small>
+      </label>
+      <label class="check"><input type="checkbox" name="closeToTray"> Keep running in the system tray when I close the window</label>
+      <label class="check"><input type="checkbox" name="clearIgnored"> Show servers I hid from "Spotted running" again</label>
+      <div class="dialog-actions">
+        <span class="spacer"></span>
+        <button type="button" class="btn ghost" data-act="close-dialog">Cancel</button>
+        <button type="submit" class="btn primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toasts" class="toasts"></div>
+  <script src="renderer.js"></script>
+</body>
+</html>
